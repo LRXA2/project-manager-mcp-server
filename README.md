@@ -234,5 +234,3 @@ Contributions welcome! This project is designed to facilitate any software devel
 
 - Python 3.12+
 - MCP framework
-- No external API keys required
-- Works completely offline
