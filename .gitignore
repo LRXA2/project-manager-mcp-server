@@ -86,7 +86,21 @@ Thumbs.db
 # Project-specific temporary files
 .staging/
 *.log
-logs/
+# We want to keep the logs directory structure but not its content
+logs/*
+!logs/.gitkeep
+!logs/mcp/
+logs/mcp/*
+!logs/mcp/.gitkeep
+!logs/mcp/deletion/
+logs/mcp/deletion/*
+!logs/mcp/deletion/.gitkeep
+!logs/mcp/move/
+logs/mcp/move/*
+!logs/mcp/move/.gitkeep
+!logs/mcp/rename/
+logs/mcp/rename/*
+!logs/mcp/rename/.gitkeep
 temp/
 tmp/
 
@@ -102,6 +116,10 @@ config.json
 # MCP specific
 .mcp/
 *.mcp.log
+
+# Context storage - exclude the content but keep the structure
+context_storage/*
+!context_storage/.gitkeep
 
 # Keep dependency lock files for reproducible builds
 # uv.lock should be committed
@@ -178,5 +196,31 @@ Icon
 auto-save-list
 tramp
 .\#*
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.node_repl_history
+.yarn-integrity
+
+# Personal Notes - Keep these private
+PERSONAL_NOTES.md
+personal_notes/
+notes.md
+notes.txt
+*.private.md
+.personal/
+
+# Target project configuration
+# Uncomment this if you want to ignore your target project configuration
+# TARGET_PROJECT_CONFIG.md
+
+# VSCode extension specific
+*.vsix
+.vscode-test/
+.vscode-test-web/
 
 # End of file
