@@ -1,6 +1,6 @@
 # Project Manager MCP Server
 
-A Model Context Protocol (MCP) server for managing any development project. Features safe file operations with audit logging, cross-platform shell command execution, intelligent context management with local storage, and comprehensive project management tools.
+A Model Context Protocol (MCP) server for managing any development project. Features safe file operations with audit logging, cross-platform shell command execution, intelligent context management with local storage, comprehensive project management tools, and Git integration.
 
 ## Purpose
 
@@ -19,6 +19,12 @@ This MCP server provides development tools for managing any software project, wi
 - **Safe File Operations**: Read, create, and edit files with staging for locked files
 - **Intelligent Filtering**: Excludes build artifacts and unnecessary files
 - **Path Validation**: Prevents access outside project boundaries
+
+### Git Integration
+- **Repository Management**: Check status, view logs, create branches
+- **Code Tracking**: View diffs, commit changes, manage staging area
+- **Cross-Platform**: Works with Git repositories on any OS
+- **Safety-First**: Audit trails for all Git operations
 
 ### Configurable Project Integration
 - **Dual Project Design**: Manages both MCP server files and your target project
@@ -46,6 +52,17 @@ This MCP server provides development tools for managing any software project, wi
 ### Shell Commands
 - `execute_command`: Execute any shell command with timeout protection
 - `get_platform_info`: Get current platform and shell information
+
+### Git Tools
+- `git_status`: Get repository status (branch, changed files)
+- `git_log`: View commit history with author and message info
+- `git_diff`: Show file changes (staged or unstaged)
+- `git_branch_list`: List all repository branches
+- `git_branch_create`: Create new branches
+- `git_branch_checkout`: Switch between branches
+- `git_commit`: Record changes to the repository
+- `git_add`: Stage files for commit
+- `git_init`: Initialize new Git repositories
 
 ### MCP Project Management
 - File read/write operations in MCP project directory
@@ -76,7 +93,12 @@ This MCP server provides development tools for managing any software project, wi
 1. Clone this repository
 2. Install dependencies:
    ```bash
-   pip install mcp
+   pip install -e .
+   ```
+   
+   Or using uv:
+   ```bash
+   uv pip install -e .
    ```
 
 3. Configure your target project path in `main.py`:
@@ -103,7 +125,24 @@ The server will initialize and provide access to all available tools through the
    TARGET_PROJECT_RELATIVE_PATH = "../my-react-app"
    ```
 
-2. **Basic Context Management**:
+2. **Using Git Tools**:
+   ```
+   # Get repository status
+   git_status(repo_path="/path/to/repository")
+   
+   # View commit history
+   git_log(repo_path="/path/to/repository", max_count=10)
+   
+   # Create and checkout a new branch
+   git_branch_create(branch_name="feature/new-feature", repo_path="/path/to/repository")
+   git_branch_checkout(branch_name="feature/new-feature", repo_path="/path/to/repository")
+   
+   # Stage and commit changes
+   git_add(file_paths=["file1.txt", "file2.py"], repo_path="/path/to/repository")
+   git_commit(message="Add new files", repo_path="/path/to/repository")
+   ```
+
+3. **Basic Context Management**:
    ```
    # At end of productive session
    end_session_summary("Fixed database connection issues and optimized queries", ["debugging", "database"])
@@ -130,7 +169,8 @@ project-manager-mcp-server/
 │   ├── shell_mcp_server.py                    # Shell command execution
 │   ├── mcp_project_manager.py                 # MCP server project management
 │   ├── base_project_manager.py                # Base project management class
-│   ├── efficient_context_manager.py           # Local context management
+│   ├── context_manager.py                     # Local context management
+│   ├── git_tools.py                           # Git repository operations
 │   └── skip_patterns.py                       # File filtering patterns
 ├── context_storage/                           # Local JSON context storage
 ├── logs/                                      # Operation logs (moves/deletes)
@@ -170,7 +210,7 @@ SKIP_FILES.add('your_custom_file.ext')
 
 See [TODO.md](TODO.md) for the complete development roadmap, including:
 - **Graceful error handling** for startup component failures
-- **Git integration** with full version control operations
+- **Enhanced Git integration** with pull/push capabilities
 - **Enhanced external tool support** in shell commands
 - **Obsidian integration** for knowledge management
 - **Improved architecture** and testing coverage
@@ -215,7 +255,7 @@ This MCP server works well with:
 ## Credits
 
 - Shell command execution implementation inspired by [mcp-server-shell](https://github.com/odysseus0/mcp-server-shell)
-- Local context management designed for efficiency and privacy
+- Git tools implementation inspired by [modelcontextprotocol/servers/git](https://github.com/modelcontextprotocol/servers/tree/main/src/git)
 - Thanks to the MCP community for robust subprocess handling patterns
 - Built with the [FastMCP](https://docs.modl.ai/mcp/) framework
 
@@ -234,5 +274,4 @@ Contributions welcome! This project is designed to facilitate any software devel
 
 - Python 3.12+
 - MCP framework
-- No external API keys required
-- Works completely offline
+- GitPython (for Git tools)

@@ -2,18 +2,28 @@ from mcp.server.fastmcp import FastMCP
 from tools.mcp_project_manager import MCPProjectManager
 from tools.shell_mcp_server import ShellMCPServer
 from tools.context_manager import ContextManager
+from tools.git_tools import GitTools
 import os
 import atexit
 import traceback
 import sys
 
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+    print("Requests library successfully imported")
+except ImportError:
+    REQUESTS_AVAILABLE = False
+    print("WARNING: Python 'requests' library not available.")
+    
 # Record component initialization status
 component_status = {
     "mcp_server": {"initialized": False, "error": None},
     "mcp_project_manager": {"initialized": False, "error": None},
     "target_project_manager": {"initialized": False, "error": None},
     "shell_server": {"initialized": False, "error": None},
-    "context_manager": {"initialized": False, "error": None}
+    "context_manager": {"initialized": False, "error": None},
+    "git_tools": {"initialized": False, "error": None}
 }
 
 try:
@@ -124,6 +134,22 @@ except Exception as e:
     print(f"ERROR: Context Manager failed to initialize: {e}")
     print(traceback.format_exc())
 
+# Initialize and register Git Tools
+git_tools = None
+try:
+    git_tools = GitTools(mcp)
+    if git_tools.is_available:
+        git_tools.register_tools()
+        component_status["git_tools"]["initialized"] = True
+        print("Git tools initialized successfully")
+    else:
+        component_status["git_tools"]["error"] = "Git not available on this system"
+        print("WARNING: Git tools not available - Git not found on system")
+except Exception as e:
+    component_status["git_tools"]["error"] = str(e)
+    print(f"ERROR: Git tools failed to initialize: {e}")
+    print(traceback.format_exc())
+
 # Register cleanup handler for shell server if initialized
 if shell_server:
     try:
@@ -183,6 +209,29 @@ if __name__ == "__main__":
         print("  - search_context: Find relevant past information")
     else:
         print("- Context management tools: NOT AVAILABLE (Context Manager failed to initialize)")
+    
+    if component_status["git_tools"]["initialized"]:
+        print("- Git tools:")
+        print("  - git_status: Get repository status")
+        print("  - git_log: View commit history")
+        print("  - git_diff: Show file changes")
+        print("  - git_branch_list: List branches")
+        print("  - git_branch_create: Create new branches")
+        print("  - git_branch_checkout: Switch branches")
+        print("  - git_commit: Commit changes")
+        print("  - git_add: Add files to staging area")
+        print("  - git_reset: Reset staging area")
+        print("  - git_show: Show commit contents")
+        print("  - git_init: Initialize repositories")
+    else:
+        print("- Git tools: NOT AVAILABLE")
+        if component_status["git_tools"]["error"]:
+            print(f"  Error: {component_status['git_tools']['error']}")
+    
+    if REQUESTS_AVAILABLE:
+        print("- Requests library: AVAILABLE")
+    else:
+        print("- Requests library: NOT AVAILABLE")
     
     print(f"\nConfiguration:")
     print(f"   Target project path: {TARGET_PROJECT_RELATIVE_PATH}")
