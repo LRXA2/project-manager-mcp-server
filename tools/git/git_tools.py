@@ -956,38 +956,49 @@ class GitTools:
             if force:
                 push_opts['force'] = True
             
+            # Variable to store push result
+            push_result = None
+            
             # Check for credentials
+            creds_found = False
             for url in remote_obj.urls:
                 creds = get_credentials_for_url(url, self.credentials)
                 if creds:
                     print(f"Found credentials for remote {remote}")
+                    creds_found = True
                     # Set Git environment variables for this push
                     with repo.git.custom_environment(
                         GIT_USERNAME=creds.get('username', ''),
                         GIT_PASSWORD=creds.get('token', '')
                     ):
-                        push_info = remote_obj.push(refspec=f"{branch}:{branch}", **push_opts)
+                        # Use direct git command approach instead of GitPython's push
+                        push_command = ['push', remote, f"{branch}:{branch}"]
+                        if force:
+                            push_command.append('--force')
+                        
+                        # Execute the git push command
+                        push_output = repo.git.execute(push_command)
+                        push_result = push_output
                         break
-            else:
-                # No credentials found, push normally
-                push_info = remote_obj.push(refspec=f"{branch}:{branch}", **push_opts)
+                        
+            # If no credentials found, push normally using git command
+            if not creds_found:
+                # Use direct git command approach 
+                push_command = ['push', remote, f"{branch}:{branch}"]
+                if force:
+                    push_command.append('--force')
+                
+                # Execute the git push command
+                push_output = repo.git.execute(push_command)
+                push_result = push_output
             
-            # Process push results
-            results = []
-            for info in push_info:
-                results.append({
-                    "ref": info.ref,
-                    "flags": info.flags,
-                    "local_ref": info.local_ref,
-                    "remote_ref": info.remote_ref,
-                    "summary": str(info.summary)
-                })
-            
+            # Return success response with the command output
             return {
                 "success": True,
                 "message": f"Pushed to {remote}/{branch} successfully",
-                "results": results
+                "output": push_result
             }
+            
         except git.InvalidGitRepositoryError:
             return {
                 "success": False,
