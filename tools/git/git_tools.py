@@ -951,52 +951,49 @@ class GitTools:
             # Get the remote
             remote_obj = repo.remotes[remote]
             
-            # Push options
-            push_opts = {}
-            if force:
-                push_opts['force'] = True
-            
-            # Variable to store push result
-            push_result = None
+            # Construct the push refspec
+            refspec = f"{branch}:{branch}"
+            force_flag = "--force" if force else None
             
             # Check for credentials
-            creds_found = False
             for url in remote_obj.urls:
                 creds = get_credentials_for_url(url, self.credentials)
                 if creds:
                     print(f"Found credentials for remote {remote}")
-                    creds_found = True
                     # Set Git environment variables for this push
-                    with repo.git.custom_environment(
-                        GIT_USERNAME=creds.get('username', ''),
-                        GIT_PASSWORD=creds.get('token', '')
-                    ):
-                        # Use direct git command approach instead of GitPython's push
-                        push_command = ['push', remote, f"{branch}:{branch}"]
+                    env = {
+                        "GIT_USERNAME": creds.get('username', ''),
+                        "GIT_PASSWORD": creds.get('token', '')
+                    }
+                    
+                    # Use direct git push approach with the Git class
+                    git_cmd = git.Git(repo.working_dir)
+                    with git_cmd.custom_environment(**env):
+                        # Use the push method directly
                         if force:
-                            push_command.append('--force')
+                            push_output = git_cmd.push(remote, refspec, force=True)
+                        else:
+                            push_output = git_cmd.push(remote, refspec)
                         
-                        # Execute the git push command
-                        push_output = repo.git.execute(push_command)
-                        push_result = push_output
-                        break
-                        
-            # If no credentials found, push normally using git command
-            if not creds_found:
-                # Use direct git command approach 
-                push_command = ['push', remote, f"{branch}:{branch}"]
-                if force:
-                    push_command.append('--force')
-                
-                # Execute the git push command
-                push_output = repo.git.execute(push_command)
-                push_result = push_output
+                        # Return success
+                        return {
+                            "success": True,
+                            "message": f"Pushed to {remote}/{branch} successfully",
+                            "output": push_output
+                        }
+                    
+            # No credentials found, push normally
+            git_cmd = git.Git(repo.working_dir)
+            if force:
+                push_output = git_cmd.push(remote, refspec, force=True)
+            else:
+                push_output = git_cmd.push(remote, refspec)
             
-            # Return success response with the command output
+            # Return success
             return {
                 "success": True,
                 "message": f"Pushed to {remote}/{branch} successfully",
-                "output": push_result
+                "output": push_output
             }
             
         except git.InvalidGitRepositoryError:
