@@ -123,6 +123,13 @@ config.json
 context_storage/*
 !context_storage/.gitkeep
 
+# Git credentials - NEVER commit these!
+config/git_credentials.json
+config/credentials/
+*.credentials.json
+*.credentials.yaml
+*.credentials.yml
+
 # Keep dependency lock files for reproducible builds
 # uv.lock should be committed
 

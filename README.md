@@ -23,6 +23,8 @@ This MCP server provides development tools for managing any software project, wi
 ### Git Integration
 - **Repository Management**: Check status, view logs, create branches
 - **Code Tracking**: View diffs, commit changes, manage staging area
+- **Remote Operations**: Clone, pull, push to remote repositories
+- **Branch Management**: Create, list, and checkout branches
 - **Cross-Platform**: Works with Git repositories on any OS
 - **Safety-First**: Audit trails for all Git operations
 
@@ -54,15 +56,26 @@ This MCP server provides development tools for managing any software project, wi
 - `get_platform_info`: Get current platform and shell information
 
 ### Git Tools
-- `git_status`: Get repository status (branch, changed files)
-- `git_log`: View commit history with author and message info
-- `git_diff`: Show file changes (staged or unstaged)
-- `git_branch_list`: List all repository branches
-- `git_branch_create`: Create new branches
-- `git_branch_checkout`: Switch between branches
-- `git_commit`: Record changes to the repository
-- `git_add`: Stage files for commit
-- `git_init`: Initialize new Git repositories
+- **Repository Management:**
+  - `git_status`: Get repository status (branch, changed files)
+  - `git_log`: View commit history with author and message info
+  - `git_diff`: Show file changes (staged or unstaged)
+  - `git_show`: Show contents of a specific commit
+  - `git_init`: Initialize new Git repositories
+  - `git_clone`: Clone a repository from a remote URL
+- **Branch Management:**
+  - `git_branch_list`: List all repository branches
+  - `git_branch_create`: Create new branches
+  - `git_branch_checkout`: Switch between branches
+- **Local Changes:**
+  - `git_add`: Stage files for commit
+  - `git_commit`: Record changes to the repository
+  - `git_reset`: Unstage all staged changes
+- **Remote Operations:**
+  - `git_pull`: Fetch and integrate with another repository or branch
+  - `git_push`: Update remote refs along with associated objects
+  - `git_remote_list`: List all remotes in a repository
+  - `git_remote_add`: Add a new remote to a repository
 
 ### MCP Project Management
 - File read/write operations in MCP project directory
@@ -127,19 +140,28 @@ The server will initialize and provide access to all available tools through the
 
 2. **Using Git Tools**:
    ```
-   # Get repository status
+   # Repository Management
    git_status(repo_path="/path/to/repository")
-   
-   # View commit history
    git_log(repo_path="/path/to/repository", max_count=10)
+   git_diff(repo_path="/path/to/repository", staged=False)
+   git_show(revision="HEAD", repo_path="/path/to/repository")
    
-   # Create and checkout a new branch
+   # Branch Management
+   git_branch_list(repo_path="/path/to/repository")
    git_branch_create(branch_name="feature/new-feature", repo_path="/path/to/repository")
    git_branch_checkout(branch_name="feature/new-feature", repo_path="/path/to/repository")
    
-   # Stage and commit changes
+   # Local Changes
    git_add(file_paths=["file1.txt", "file2.py"], repo_path="/path/to/repository")
    git_commit(message="Add new files", repo_path="/path/to/repository")
+   git_reset(repo_path="/path/to/repository")  # Unstage all changes
+   
+   # Remote Operations
+   git_clone(url="https://github.com/user/repo.git", target_path="./local-repo")
+   git_pull(repo_path="/path/to/repository", remote="origin", branch="main")
+   git_push(repo_path="/path/to/repository", remote="origin", branch="main")
+   git_remote_list(repo_path="/path/to/repository")
+   git_remote_add(name="upstream", url="https://github.com/original/repo.git", repo_path="/path/to/repository")
    ```
 
 3. **Basic Context Management**:
@@ -170,11 +192,14 @@ project-manager-mcp-server/
 │   ├── mcp_project_manager.py                 # MCP server project management
 │   ├── base_project_manager.py                # Base project management class
 │   ├── context_manager.py                     # Local context management
-│   ├── git_tools.py                           # Git repository operations
+│   ├── git/
+│   │   └── git_tools.py                       # Git repository operations
 │   └── skip_patterns.py                       # File filtering patterns
 ├── context_storage/                           # Local JSON context storage
 ├── logs/                                      # Operation logs (moves/deletes)
 ├── .staging/                                  # Staged file changes
+├── config/
+│   └── git_credentials.json.template          # Template for Git credentials
 ├── README.md
 ├── CONTEXT_MANAGER_GUIDE.md                  # Detailed context management guide
 ├── SAFETY_GUIDELINES.md                      # File operation safety policies
@@ -196,6 +221,29 @@ class YourProjectManager(BaseProjectManager):
     def register_specific_tools(self):
         # Add project-specific tools here
         pass
+```
+
+### Configuring Git Credentials
+
+For remote operations (clone, pull, push), you can configure Git credentials:
+
+1. Copy the template file:
+```bash
+cp config/git_credentials.json.template config/git_credentials.json
+```
+
+2. Edit the credentials file with your Git provider settings:
+```json
+{
+  "github.com": {
+    "username": "your-username",
+    "password": "your-personal-access-token"
+  },
+  "gitlab.com": {
+    "username": "your-username",
+    "password": "your-personal-access-token"
+  }
+}
 ```
 
 ### Customizing File Filtering

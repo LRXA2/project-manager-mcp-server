@@ -1,10 +1,10 @@
 # TODO
 
 ## 🚀 High Priority
-- [x] **Git functions**: Basic git operations (status, diff, add, commit)
-- [ ] **Advanced Git operations**: Pull/push capabilities with authentication
 - [ ] **External tools**: Auto-detect and integrate dev tools (npm, pip, cargo, docker)
 - [ ] **Obsidian integration**: Create/search notes, link to development context
+- [ ] **Brave API integration**: Add support for web search using Brave API
+- [ ] **Web scraping capability**: Implement web scraping tools for data extraction
 
 ## 🔮 Future Enhancements
 - [ ] Better error messages with suggested fixes

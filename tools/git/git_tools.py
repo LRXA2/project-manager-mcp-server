@@ -8,9 +8,11 @@ and making commits using the GitPython library.
 
 import os
 import traceback
+import urllib.parse
 from typing import Dict, List, Any, Optional, Union
 from datetime import datetime
 import git
+from tools.git.credentials import load_credentials, get_credentials_for_url, apply_credentials_to_url
 
 class GitTools:
     """Provides Git repository operations for the MCP server using GitPython."""
@@ -24,11 +26,14 @@ class GitTools:
         """
         self.mcp = mcp_instance
         self.is_available = self._check_git_availability()
-        self.tools_dir = os.path.dirname(os.path.abspath(__file__))
+        self.tools_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Go up one level from git/
         self.base_dir = os.path.dirname(self.tools_dir)
         self.default_repo_path = os.path.join(self.base_dir, 'mcp-git', 'servers')
+        # Load credentials
+        self.credentials = load_credentials(self.base_dir)
         print(f"Git tools initialized with base directory: {self.base_dir}")
         print(f"Default Git repository path: {self.default_repo_path}")
+        print(f"Git credentials loaded: {len(self.credentials)} hosts configured")
     
     def _check_git_availability(self) -> bool:
         """Check if Git is available on the system."""
@@ -210,6 +215,85 @@ class GitTools:
                     dict: Result of the reset operation
                 """
                 return self._git_reset(repo_path)
+            
+            # Define a tool for Git clone
+            @self.mcp.tool()
+            def git_clone(url: str, target_path: str, branch: str = None) -> Dict[str, Any]:
+                """
+                Clones a repository from a remote URL.
+                
+                Args:
+                    url (str): URL of the repository to clone.
+                    target_path (str): Local path where to clone the repository.
+                    branch (str, optional): Specific branch to clone.
+                
+                Returns:
+                    dict: Result of the clone operation
+                """
+                return self._git_clone(url, target_path, branch)
+            
+            # Define a tool for Git pull
+            @self.mcp.tool()
+            def git_pull(repo_path: str = None, remote: str = "origin", branch: str = None) -> Dict[str, Any]:
+                """
+                Fetches from and integrates with another repository or a local branch.
+                
+                Args:
+                    repo_path (str, optional): Path to the Git repository.
+                    remote (str, optional): Remote name to pull from. Default is "origin".
+                    branch (str, optional): Branch to pull. If None, pulls the current branch.
+                
+                Returns:
+                    dict: Result of the pull operation
+                """
+                return self._git_pull(repo_path, remote, branch)
+            
+            # Define a tool for Git push
+            @self.mcp.tool()
+            def git_push(repo_path: str = None, remote: str = "origin", branch: str = None, force: bool = False) -> Dict[str, Any]:
+                """
+                Updates remote refs along with associated objects.
+                
+                Args:
+                    repo_path (str, optional): Path to the Git repository.
+                    remote (str, optional): Remote name to push to. Default is "origin".
+                    branch (str, optional): Branch to push. If None, pushes the current branch.
+                    force (str, optional): Force push. Default is False.
+                
+                Returns:
+                    dict: Result of the push operation
+                """
+                return self._git_push(repo_path, remote, branch, force)
+            
+            # Define a tool for Git remote operations
+            @self.mcp.tool()
+            def git_remote_list(repo_path: str = None) -> Dict[str, Any]:
+                """
+                Lists all remotes in a Git repository.
+                
+                Args:
+                    repo_path (str, optional): Path to the Git repository.
+                
+                Returns:
+                    dict: List of remotes with their URLs
+                """
+                return self._git_remote_list(repo_path)
+            
+            # Define a tool for adding Git remotes
+            @self.mcp.tool()
+            def git_remote_add(name: str, url: str, repo_path: str = None) -> Dict[str, Any]:
+                """
+                Adds a new remote to a Git repository.
+                
+                Args:
+                    name (str): Name of the remote.
+                    url (str): URL of the remote.
+                    repo_path (str, optional): Path to the Git repository.
+                
+                Returns:
+                    dict: Result of the add remote operation
+                """
+                return self._git_remote_add(name, url, repo_path)
             
             print("Git tools registered successfully")
             return True
@@ -699,4 +783,293 @@ class GitTools:
             return {
                 "success": False,
                 "error": f"Error resetting Git staging area: {str(e)}"
+            }
+    
+    def _git_clone(self, url: str, target_path: str, branch: str = None) -> Dict[str, Any]:
+        """Clone a Git repository."""
+        try:
+            # Handle relative paths
+            if not os.path.isabs(target_path):
+                target_path = os.path.join(self.base_dir, target_path)
+                print(f"Resolved relative target path to: {target_path}")
+            
+            # Create parent directory if it doesn't exist
+            parent_dir = os.path.dirname(target_path)
+            if not os.path.exists(parent_dir):
+                os.makedirs(parent_dir, exist_ok=True)
+            
+            # Clone options
+            clone_opts = {}
+            if branch:
+                clone_opts['branch'] = branch
+            
+            # Check for credentials in our credentials file
+            creds = get_credentials_for_url(url, self.credentials)
+            if creds:
+                print(f"Using credentials for {url}")
+                # Apply credentials to URL if it's HTTPS
+                url_with_creds = apply_credentials_to_url(url, creds)
+                
+                # Use the URL with credentials
+                repo = git.Repo.clone_from(url_with_creds, target_path, **clone_opts)
+                
+                # Use the original URL in the response (don't expose credentials)
+                clone_url = url
+            else:
+                # No credentials found, use the URL as is
+                repo = git.Repo.clone_from(url, target_path, **clone_opts)
+                clone_url = url
+            
+            return {
+                "success": True,
+                "message": f"Repository cloned successfully to {target_path}",
+                "repo_path": target_path,
+                "branch": repo.active_branch.name,
+                "url": clone_url
+            }
+        except git.GitCommandError as e:
+            return {
+                "success": False,
+                "error": f"Git error: {e.stderr.strip()}"
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error cloning repository: {str(e)}"
+            }
+    
+    def _git_pull(self, repo_path: str = None, remote: str = "origin", branch: str = None) -> Dict[str, Any]:
+        """Pull changes from a remote repository."""
+        try:
+            repo = self._get_repo(repo_path)
+            
+            # Get current branch if none specified
+            if not branch:
+                try:
+                    branch = repo.active_branch.name
+                except TypeError:
+                    return {
+                        "success": False,
+                        "error": "Cannot pull in detached HEAD state without specifying branch"
+                    }
+            
+            # Check if remote exists
+            if remote not in [r.name for r in repo.remotes]:
+                return {
+                    "success": False,
+                    "error": f"Remote '{remote}' not found"
+                }
+            
+            # Get the remote
+            remote_obj = repo.remotes[remote]
+            
+            # Check for credentials
+            for url in remote_obj.urls:
+                creds = get_credentials_for_url(url, self.credentials)
+                if creds:
+                    print(f"Found credentials for remote {remote}")
+                    # Set Git environment variables for this pull
+                    with repo.git.custom_environment(
+                        GIT_USERNAME=creds.get('username', ''),
+                        GIT_PASSWORD=creds.get('token', '')
+                    ):
+                        pull_info = remote_obj.pull(refspec=branch)
+                        break
+            else:
+                # No credentials found, pull normally
+                pull_info = remote_obj.pull(refspec=branch)
+            
+            # Process pull results
+            results = []
+            for info in pull_info:
+                results.append({
+                    "ref": info.ref,
+                    "flags": info.flags,
+                    "note": info.note,
+                    "summary": str(info.summary)
+                })
+            
+            return {
+                "success": True,
+                "message": f"Pulled from {remote}/{branch} successfully",
+                "results": results
+            }
+        except git.InvalidGitRepositoryError:
+            return {
+                "success": False,
+                "error": f"Not a valid Git repository: {repo_path or os.getcwd()}"
+            }
+        except git.NoSuchPathError:
+            return {
+                "success": False,
+                "error": f"Path does not exist: {repo_path}"
+            }
+        except git.GitCommandError as e:
+            return {
+                "success": False,
+                "error": f"Git error: {e.stderr.strip()}"
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error pulling changes: {str(e)}"
+            }
+    
+    def _git_push(self, repo_path: str = None, remote: str = "origin", branch: str = None, force: bool = False) -> Dict[str, Any]:
+        """Push changes to a remote repository."""
+        try:
+            repo = self._get_repo(repo_path)
+            
+            # Get current branch if none specified
+            if not branch:
+                try:
+                    branch = repo.active_branch.name
+                except TypeError:
+                    return {
+                        "success": False,
+                        "error": "Cannot push in detached HEAD state without specifying branch"
+                    }
+            
+            # Check if remote exists
+            if remote not in [r.name for r in repo.remotes]:
+                return {
+                    "success": False,
+                    "error": f"Remote '{remote}' not found"
+                }
+            
+            # Get the remote
+            remote_obj = repo.remotes[remote]
+            
+            # Push options
+            push_opts = {}
+            if force:
+                push_opts['force'] = True
+            
+            # Check for credentials
+            for url in remote_obj.urls:
+                creds = get_credentials_for_url(url, self.credentials)
+                if creds:
+                    print(f"Found credentials for remote {remote}")
+                    # Set Git environment variables for this push
+                    with repo.git.custom_environment(
+                        GIT_USERNAME=creds.get('username', ''),
+                        GIT_PASSWORD=creds.get('token', '')
+                    ):
+                        push_info = remote_obj.push(refspec=f"{branch}:{branch}", **push_opts)
+                        break
+            else:
+                # No credentials found, push normally
+                push_info = remote_obj.push(refspec=f"{branch}:{branch}", **push_opts)
+            
+            # Process push results
+            results = []
+            for info in push_info:
+                results.append({
+                    "ref": info.ref,
+                    "flags": info.flags,
+                    "local_ref": info.local_ref,
+                    "remote_ref": info.remote_ref,
+                    "summary": str(info.summary)
+                })
+            
+            return {
+                "success": True,
+                "message": f"Pushed to {remote}/{branch} successfully",
+                "results": results
+            }
+        except git.InvalidGitRepositoryError:
+            return {
+                "success": False,
+                "error": f"Not a valid Git repository: {repo_path or os.getcwd()}"
+            }
+        except git.NoSuchPathError:
+            return {
+                "success": False,
+                "error": f"Path does not exist: {repo_path}"
+            }
+        except git.GitCommandError as e:
+            return {
+                "success": False,
+                "error": f"Git error: {e.stderr.strip()}"
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error pushing changes: {str(e)}"
+            }
+    
+    def _git_remote_list(self, repo_path: str = None) -> Dict[str, Any]:
+        """List all remotes in a Git repository."""
+        try:
+            repo = self._get_repo(repo_path)
+            
+            # Get all remotes
+            remotes = []
+            for remote in repo.remotes:
+                remotes.append({
+                    "name": remote.name,
+                    "urls": list(remote.urls)
+                })
+            
+            return {
+                "success": True,
+                "remotes": remotes
+            }
+        except git.InvalidGitRepositoryError:
+            return {
+                "success": False,
+                "error": f"Not a valid Git repository: {repo_path or os.getcwd()}"
+            }
+        except git.NoSuchPathError:
+            return {
+                "success": False,
+                "error": f"Path does not exist: {repo_path}"
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error listing Git remotes: {str(e)}"
+            }
+    
+    def _git_remote_add(self, name: str, url: str, repo_path: str = None) -> Dict[str, Any]:
+        """Add a new remote to a Git repository."""
+        try:
+            repo = self._get_repo(repo_path)
+            
+            # Check if remote already exists
+            existing_remotes = [r.name for r in repo.remotes]
+            if name in existing_remotes:
+                return {
+                    "success": False,
+                    "error": f"Remote '{name}' already exists"
+                }
+            
+            # Add the remote
+            remote = repo.create_remote(name, url)
+            
+            return {
+                "success": True,
+                "message": f"Remote '{name}' added with URL: {url}",
+                "name": name,
+                "url": url
+            }
+        except git.InvalidGitRepositoryError:
+            return {
+                "success": False,
+                "error": f"Not a valid Git repository: {repo_path or os.getcwd()}"
+            }
+        except git.NoSuchPathError:
+            return {
+                "success": False,
+                "error": f"Path does not exist: {repo_path}"
+            }
+        except git.GitCommandError as e:
+            return {
+                "success": False,
+                "error": f"Git error: {e.stderr.strip()}"
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error adding Git remote: {str(e)}"
             }
