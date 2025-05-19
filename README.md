@@ -27,7 +27,6 @@ This MCP server provides development tools for managing any software project, wi
 - **Branch Management**: Create, list, and checkout branches
 - **Cross-Platform**: Works with Git repositories on any OS
 - **Safety-First**: Audit trails for all Git operations
-- **Secure Credentials**: Template-based credential management with .gitignore protection
 
 ### Configurable Project Integration
 - **Dual Project Design**: Manages both MCP server files and your target project
@@ -49,3 +48,278 @@ This MCP server provides development tools for managing any software project, wi
 - **Staging System**: Locked files are staged for manual review
 - **Audit Trail**: All operations are logged with detailed information
 - **Human Oversight**: Destructive operations require manual confirmation
+
+## Available Tools
+
+### Shell Commands
+- `execute_command`: Execute any shell command with timeout protection
+- `get_platform_info`: Get current platform and shell information
+
+### Git Tools
+- **Repository Management:**
+  - `git_status`: Get repository status (branch, changed files)
+  - `git_log`: View commit history with author and message info
+  - `git_diff`: Show file changes (staged or unstaged)
+  - `git_show`: Show contents of a specific commit
+  - `git_init`: Initialize new Git repositories
+  - `git_clone`: Clone a repository from a remote URL
+- **Branch Management:**
+  - `git_branch_list`: List all repository branches
+  - `git_branch_create`: Create new branches
+  - `git_branch_checkout`: Switch between branches
+- **Local Changes:**
+  - `git_add`: Stage files for commit
+  - `git_commit`: Record changes to the repository
+  - `git_reset`: Unstage all staged changes
+- **Remote Operations:**
+  - `git_pull`: Fetch and integrate with another repository or branch
+  - `git_push`: Update remote refs along with associated objects
+  - `git_remote_list`: List all remotes in a repository
+  - `git_remote_add`: Add a new remote to a repository
+
+### MCP Project Management
+- File read/write operations in MCP project directory
+- Directory listing and navigation
+- File staging and editing
+- **Move with logging**: Execute moves with audit trail (no overwrites)
+- **Safe rename/delete**: Creates logs for manual execution (see [Safety Guidelines](SAFETY_GUIDELINES.md))
+
+### Target Project Management
+- File read/write operations in your project directory
+- Directory listing and navigation
+- File staging and editing
+- **Move with logging**: Execute moves with audit trail (no overwrites)
+- **Safe rename/delete**: Creates logs for manual execution
+
+### Local Context Management
+- `end_session_summary`: Save session insights with key phrase extraction
+- `record_significant_event`: Track important development milestones
+- `save_context_levels`: Store context at multiple detail levels
+- `start_with_context`: Retrieve context from recent sessions
+- `get_relevant_context`: Get task-specific context
+- `search_context`: Search through stored context with relevance scoring
+- `get_context_stats`: View statistics about stored context
+- `clear_old_context`: Clean up old context entries
+
+## Installation
+
+1. Clone this repository
+2. Install dependencies:
+   ```bash
+   pip install -e .
+   ```
+   
+   Or using uv:
+   ```bash
+   uv pip install -e .
+   ```
+
+3. Configure your target project path in `main.py`:
+   ```python
+   # Update this path to point to your project
+   TARGET_PROJECT_RELATIVE_PATH = "../your-project"
+   ```
+
+## Usage
+
+Start the MCP server:
+
+```bash
+python main.py
+```
+
+The server will initialize and provide access to all available tools through the MCP protocol.
+
+### Quick Start Guide
+
+1. **Configure Target Project** (Required for target project tools):
+   ```python
+   # In main.py, update this line to point to your project:
+   TARGET_PROJECT_RELATIVE_PATH = "../my-react-app"
+   ```
+
+2. **Using Git Tools**:
+   ```
+   # Repository Management
+   git_status(repo_path="/path/to/repository")
+   git_log(repo_path="/path/to/repository", max_count=10)
+   git_diff(repo_path="/path/to/repository", staged=False)
+   git_show(revision="HEAD", repo_path="/path/to/repository")
+   
+   # Branch Management
+   git_branch_list(repo_path="/path/to/repository")
+   git_branch_create(branch_name="feature/new-feature", repo_path="/path/to/repository")
+   git_branch_checkout(branch_name="feature/new-feature", repo_path="/path/to/repository")
+   
+   # Local Changes
+   git_add(file_paths=["file1.txt", "file2.py"], repo_path="/path/to/repository")
+   git_commit(message="Add new files", repo_path="/path/to/repository")
+   git_reset(repo_path="/path/to/repository")  # Unstage all changes
+   
+   # Remote Operations
+   git_clone(url="https://github.com/user/repo.git", target_path="./local-repo")
+   git_pull(repo_path="/path/to/repository", remote="origin", branch="main")
+   git_push(repo_path="/path/to/repository", remote="origin", branch="main")
+   git_remote_list(repo_path="/path/to/repository")
+   git_remote_add(name="upstream", url="https://github.com/original/repo.git", repo_path="/path/to/repository")
+   ```
+
+3. **Basic Context Management**:
+   ```
+   # At end of productive session
+   end_session_summary("Fixed database connection issues and optimized queries", ["debugging", "database"])
+   
+   # At start of new session
+   start_with_context(3)
+   
+   # Record significant achievements
+   record_significant_event("error_solved", "Fixed memory leak in data processing pipeline")
+   ```
+
+See [CONTEXT_MANAGER_GUIDE.md](CONTEXT_MANAGER_GUIDE.md) for detailed context management usage.
+
+### Safety Guidelines
+
+**IMPORTANT**: This server executes move operations immediately (with audit logging) but does not allow direct file deletion or renaming for safety. Delete and rename operations create logs for manual review and execution. See [SAFETY_GUIDELINES.md](SAFETY_GUIDELINES.md) for complete details.
+
+## Architecture
+
+```
+project-manager-mcp-server/
+├── main.py                                    # Server entry point
+├── tools/
+│   ├── shell_mcp_server.py                    # Shell command execution
+│   ├── mcp_project_manager.py                 # MCP server project management
+│   ├── base_project_manager.py                # Base project management class
+│   ├── context_manager.py                     # Local context management
+│   ├── git/
+│   │   └── git_tools.py                       # Git repository operations
+│   └── skip_patterns.py                       # File filtering patterns
+├── context_storage/                           # Local JSON context storage
+├── logs/                                      # Operation logs (moves/deletes)
+├── .staging/                                  # Staged file changes
+├── config/
+│   └── git_credentials.json.template          # Template for Git credentials
+├── README.md
+├── CONTEXT_MANAGER_GUIDE.md                  # Detailed context management guide
+├── SAFETY_GUIDELINES.md                      # File operation safety policies
+└── TODO.md                                   # Development roadmap and future features
+```
+
+## Configuration
+
+### Adding Your Project
+
+1. Update `main.py` to point to your project:
+```python
+TARGET_PROJECT_RELATIVE_PATH = "../your-project-name"
+```
+
+2. Optionally create a custom project manager by extending `BaseProjectManager`:
+```python
+class YourProjectManager(BaseProjectManager):
+    def register_specific_tools(self):
+        # Add project-specific tools here
+        pass
+```
+
+### Configuring Git Credentials
+
+For remote operations (clone, pull, push), you can configure Git credentials:
+
+1. Copy the template file:
+```bash
+cp config/git_credentials.json.template config/git_credentials.json
+```
+
+2. Edit the credentials file with your Git provider settings:
+```json
+{
+  "github.com": {
+    "username": "your-username",
+    "password": "your-personal-access-token"
+  },
+  "gitlab.com": {
+    "username": "your-username",
+    "password": "your-personal-access-token"
+  }
+}
+```
+
+### Customizing File Filtering
+
+Edit `tools/skip_patterns.py` to customize which files and directories are excluded:
+```python
+SKIP_DIRS.add('your_custom_dir')
+SKIP_FILES.add('your_custom_file.ext')
+```
+
+## Roadmap & Future Features
+
+See [TODO.md](TODO.md) for the complete development roadmap, including:
+- **Graceful error handling** for startup component failures
+- **Enhanced Git integration** with pull/push capabilities
+- **Enhanced external tool support** in shell commands
+- **Obsidian integration** for knowledge management
+- **Improved architecture** and testing coverage
+
+## Design Philosophy
+
+### Safety First
+- **No destructive operations**: Move/delete create logs instead of executing
+- **Manual oversight**: Critical operations require human review
+- **Audit trail**: All operations are logged with detailed instructions
+- **Staged changes**: Locked files are staged for review
+
+### Universal Design
+- **Project-agnostic**: Works with any codebase or project type
+- **Modular architecture**: Easy to extend for specific project needs
+- **Configurable paths**: Simple setup for any project structure
+- **Cross-platform**: Consistent behavior across operating systems
+
+### Local-First Context Management
+- **No external dependencies**: Uses simple JSON files for storage
+- **Smart text analysis**: Extracts key decisions, problems, solutions automatically
+- **Fast keyword search**: Local search with relevance scoring
+- **Hierarchical storage**: Different detail levels for different needs
+- **Zero cost**: No API fees or subscriptions required
+
+### Local-First Data
+- **All data stays on your machine**: Context stored in local JSON files
+- **No network dependencies**: Works completely offline
+- **Fast startup**: No API initialization delays
+- **Easy backup**: Just copy the `context_storage` directory
+
+## Example Project Integrations
+
+This MCP server works well with:
+- **Web Applications**: React, Vue, Angular projects
+- **Backend Services**: Node.js, Python, Go, Rust projects
+- **Mobile Apps**: React Native, Flutter projects
+- **Desktop Applications**: Electron, Tauri projects
+- **Documentation Sites**: Jekyll, Hugo, GitBook projects
+- **VSCode Extensions**: TypeScript/JavaScript extension projects
+
+## Credits
+
+- Shell command execution implementation inspired by [mcp-server-shell](https://github.com/odysseus0/mcp-server-shell)
+- Git tools implementation inspired by [modelcontextprotocol/servers/git](https://github.com/modelcontextprotocol/servers/tree/main/src/git)
+- Thanks to the MCP community for robust subprocess handling patterns
+- Built with the [FastMCP](https://docs.modl.ai/mcp/) framework
+
+## Contributing
+
+Contributions welcome! This project is designed to facilitate any software development workflow and can be adapted for various project types and development environments.
+
+### Adding Project-Specific Features
+
+1. Create a new project manager class extending `BaseProjectManager`
+2. Add project-specific tools in the `register_specific_tools()` method
+3. Update `main.py` to use your custom project manager
+4. Submit a PR with your enhancements!
+
+## Requirements
+
+- Python 3.12+
+- MCP framework
+- GitPython (for Git tools)
