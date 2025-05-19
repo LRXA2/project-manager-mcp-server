@@ -9,6 +9,7 @@ and making commits using the GitPython library.
 import os
 import traceback
 import urllib.parse
+import subprocess
 from typing import Dict, List, Any, Optional, Union
 from datetime import datetime
 import git
@@ -947,54 +948,77 @@ class GitTools:
                     "success": False,
                     "error": f"Remote '{remote}' not found"
                 }
+                
+            # Get repository working directory
+            repo_dir = repo.working_dir
             
-            # Get the remote
-            remote_obj = repo.remotes[remote]
-            
-            # Construct the push refspec
-            refspec = f"{branch}:{branch}"
-            force_flag = "--force" if force else None
+            # Construct git push command
+            cmd = ["git", "push"]
+            if force:
+                cmd.append("--force")
+            cmd.append(remote)
+            cmd.append(f"{branch}:{branch}")
             
             # Check for credentials
-            for url in remote_obj.urls:
+            creds_found = False
+            for url in repo.remotes[remote].urls:
                 creds = get_credentials_for_url(url, self.credentials)
                 if creds:
                     print(f"Found credentials for remote {remote}")
-                    # Set Git environment variables for this push
-                    env = {
-                        "GIT_USERNAME": creds.get('username', ''),
-                        "GIT_PASSWORD": creds.get('token', '')
-                    }
+                    creds_found = True
                     
-                    # Use direct git push approach with the Git class
-                    git_cmd = git.Git(repo.working_dir)
-                    with git_cmd.custom_environment(**env):
-                        # Use the push method directly
-                        if force:
-                            push_output = git_cmd.push(remote, refspec, force=True)
-                        else:
-                            push_output = git_cmd.push(remote, refspec)
-                        
-                        # Return success
+                    # Set up environment for credentials
+                    env = os.environ.copy()
+                    env["GIT_USERNAME"] = creds.get('username', '')
+                    env["GIT_PASSWORD"] = creds.get('token', '')
+                    
+                    # Execute git push with credentials in environment
+                    process = subprocess.Popen(
+                        cmd,
+                        cwd=repo_dir,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        env=env
+                    )
+                    
+                    stdout, stderr = process.communicate()
+                    
+                    # Check if command succeeded
+                    if process.returncode == 0:
                         return {
                             "success": True,
                             "message": f"Pushed to {remote}/{branch} successfully",
-                            "output": push_output
+                            "output": stdout.decode('utf-8')
                         }
-                    
-            # No credentials found, push normally
-            git_cmd = git.Git(repo.working_dir)
-            if force:
-                push_output = git_cmd.push(remote, refspec, force=True)
-            else:
-                push_output = git_cmd.push(remote, refspec)
+                    else:
+                        return {
+                            "success": False,
+                            "error": f"Git error: {stderr.decode('utf-8')}"
+                        }
             
-            # Return success
-            return {
-                "success": True,
-                "message": f"Pushed to {remote}/{branch} successfully",
-                "output": push_output
-            }
+            # If no credentials found, execute git push normally
+            if not creds_found:
+                process = subprocess.Popen(
+                    cmd,
+                    cwd=repo_dir,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+                
+                stdout, stderr = process.communicate()
+                
+                # Check if command succeeded
+                if process.returncode == 0:
+                    return {
+                        "success": True,
+                        "message": f"Pushed to {remote}/{branch} successfully",
+                        "output": stdout.decode('utf-8')
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": f"Git error: {stderr.decode('utf-8')}"
+                    }
             
         except git.InvalidGitRepositoryError:
             return {
@@ -1005,11 +1029,6 @@ class GitTools:
             return {
                 "success": False,
                 "error": f"Path does not exist: {repo_path}"
-            }
-        except git.GitCommandError as e:
-            return {
-                "success": False,
-                "error": f"Git error: {e.stderr.strip()}"
             }
         except Exception as e:
             return {
