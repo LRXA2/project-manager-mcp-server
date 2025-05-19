@@ -2,18 +2,20 @@
 
 This file provides documentation for setting up Git credentials for use with the MCP server's Git tools.
 
+## IMPORTANT: Security Warning
+
+The credentials.json file is ignored by Git for security reasons. DO NOT commit this file to your repository, 
+as it contains sensitive information like personal access tokens that should be kept private.
+
 ## Configuration
 
-1. Copy one of the template/example files to create your credentials file:
+1. Copy the template file to create your credentials file:
    ```bash
-   # From template (blank values)
-   cp git.json.template git.json
-
-   # Or from example (with example values to modify)
-   cp git.json.example git.json
+   # Create your credentials file from the template
+   cp credentials.json.template credentials.json
    ```
 
-2. Edit the git.json file with your Git provider credentials:
+2. Edit the credentials.json file with your Git provider credentials:
    ```json
    {
      "github.com": {
@@ -61,3 +63,4 @@ This file provides documentation for setting up Git credentials for use with the
 - Use the minimum required permissions for tokens
 - Consider using different tokens for different contexts
 - Rotate tokens regularly according to your organization's security policies
+- The credentials.json file is already added to .gitignore to prevent accidental commits

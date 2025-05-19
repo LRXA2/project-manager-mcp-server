@@ -228,4 +228,12 @@ notes.txt
 # Git repository for MCP server development
 mcp-git/
 
+# Credentials and sensitive information
+config/credentials.json
+**/credentials.json
+**/*.key
+**/*.pem
+**/*.pfx
+**/*.p12
+
 # End of file
