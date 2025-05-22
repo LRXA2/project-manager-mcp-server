@@ -1,8 +1,6 @@
 # TODO
 
 ## 🚀 High Priority
-- [x] **Git functions**: Basic git operations (status, diff, add, commit)
-- [ ] **Fix Git push functionality**: Resolve issues with git_push implementation to work reliably across platforms
 - [ ] **Advanced Git operations**: Pull/push capabilities with authentication
 - [ ] **External tools**: Auto-detect and integrate dev tools (npm, pip, cargo, docker)
 - [ ] **Obsidian integration**: Create/search notes, link to development context
